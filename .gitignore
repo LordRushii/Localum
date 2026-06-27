@@ -1,0 +1,4 @@
+node_modules
+.device-preference.json
+QVAC_Offline_AI_Image_Generator_Roadmap.pdf
+dist/
