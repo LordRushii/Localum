@@ -3,8 +3,9 @@ import path from 'path';
 import http from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
-import { ensureModelLoaded, getModelState } from './src/modelManager.js';
+import { ensureModelLoaded, getModelState, resetModelState } from './src/modelManager.js';
 import { runDiffusion } from './src/diffusionService.js';
+import { isWorkerCrash, setPreferredDevice } from './src/deviceFallback.js';
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -54,7 +55,24 @@ io.on('connection', (socket) => {
       );
       socket.emit('success', { url: dataUrl, prompt, seed });
     } catch (err: any) {
-      socket.emit('error_event', { message: 'Image generation failed: ' + err.message });
+      if (isWorkerCrash(err)) {
+        setPreferredDevice('cpu');
+        resetModelState(); // clear loadedModelId / process.modelId
+        socket.emit('progress', { percent: 0, status: 'GPU driver crashed. Falling back to CPU...', sub: 'CPU FALLBACK' });
+        try {
+          const modelId = await ensureModelLoaded((p, s) => io.emit('model-download-progress', { percent: Math.round(p), status: s }));
+          if (!modelId) {
+            throw new Error('Model failed to load on CPU');
+          }
+          const { dataUrl, seed } = await runDiffusion(modelId, prompt, (p, s) =>
+            socket.emit('progress', { percent: p, status: s, sub: 'RUNNING DIFFUSION (CPU)' }));
+          socket.emit('success', { url: dataUrl, prompt, seed });
+        } catch (cpuErr: any) {
+          socket.emit('error_event', { message: 'Image generation failed on CPU: ' + cpuErr.message });
+        }
+      } else {
+        socket.emit('error_event', { message: 'Image generation failed: ' + err.message });
+      }
     }
   });
 

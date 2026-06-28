@@ -22,6 +22,11 @@ export function getModelState() {
   return { loadedModelId, isLoading, loadPercent, loadStatus };
 }
 
+export function resetModelState() {
+  loadedModelId = null;
+  process.modelId = null;
+}
+
 export async function ensureModelLoaded(onProgress?: (percent: number, status: string) => void): Promise<string | null> {
   if (loadedModelId) {
     try {
