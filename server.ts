@@ -4,6 +4,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { ensureModelLoaded, getModelState } from './src/modelManager.js';
+import { runDiffusion } from './src/diffusionService.js';
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,8 +43,19 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('generate', async (data) => {
-    /* Phase 4 */
+  socket.on('generate', async ({ prompt, ratio }) => {
+    if (!prompt?.trim()) return socket.emit('error_event', { message: 'Prompt is required' });
+    const { loadedModelId } = getModelState();
+    if (!loadedModelId) return socket.emit('error_event', { message: 'Model is not loaded yet' });
+    try {
+      socket.emit('progress', { percent: 0, status: 'Starting diffusion...', sub: 'DIFFUSION INITIALIZING' });
+      const { dataUrl, seed } = await runDiffusion(loadedModelId, prompt,
+        (percent, status) => socket.emit('progress', { percent, status, sub: 'RUNNING DIFFUSION' })
+      );
+      socket.emit('success', { url: dataUrl, prompt, seed });
+    } catch (err: any) {
+      socket.emit('error_event', { message: 'Image generation failed: ' + err.message });
+    }
   });
 
   socket.on('disconnect', () => {

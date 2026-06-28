@@ -33,8 +33,53 @@ socket.on('model-download-progress', (data) => {
     downloadBtn.disabled = true;
     downloadBtn.textContent = 'Model Loaded';
     progressBar.classList.add('completed');
+    // Enable generation once model is loaded
+    document.getElementById('generateBtn').disabled = false;
   } else {
     downloadBtn.disabled = false;
     downloadBtn.textContent = 'Trigger Model Download';
   }
+});
+
+// Generation handler elements
+const promptInput = document.getElementById('promptInput');
+const generateBtn = document.getElementById('generateBtn');
+const genStatusContainer = document.getElementById('genStatusContainer');
+const genStatusText = document.getElementById('genStatusText');
+const genPercentText = document.getElementById('genPercentText');
+const genProgressBar = document.getElementById('genProgressBar');
+const resultImage = document.getElementById('resultImage');
+
+generateBtn.addEventListener('click', () => {
+  const prompt = promptInput.value.trim();
+  if (!prompt) return alert('Please enter a prompt.');
+
+  generateBtn.disabled = true;
+  genStatusContainer.style.display = 'block';
+  resultImage.style.display = 'none';
+
+  socket.emit('generate', { prompt, ratio: '1:1' });
+});
+
+socket.on('progress', (data) => {
+  const { percent, status, sub } = data;
+  genStatusText.textContent = `${sub || 'Running'}: ${status}`;
+  genPercentText.textContent = `${percent}%`;
+  genProgressBar.style.width = `${percent}%`;
+});
+
+socket.on('success', (data) => {
+  generateBtn.disabled = false;
+  genStatusText.textContent = 'Generation complete!';
+  genPercentText.textContent = '100%';
+  genProgressBar.style.width = '100%';
+  
+  resultImage.src = data.url;
+  resultImage.style.display = 'block';
+  console.log('Successfully generated image payload:', data.url.substring(0, 100) + '...');
+});
+
+socket.on('error_event', (err) => {
+  generateBtn.disabled = false;
+  alert(`Error: ${err.message}`);
 });

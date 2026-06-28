@@ -24,6 +24,24 @@
           <div id="progressBar" class="progress-bar" style="width: 0%;"></div>
         </div>
       </div>
+    <div class="card" style="margin-top: 1.5rem;">
+      <h3>Generate Image</h3>
+      <textarea id="promptInput" placeholder="Enter prompt here..." rows="3" style="width: 100%; box-sizing: border-box; margin-bottom: 1rem; padding: 0.5rem;"></textarea>
+      <button id="generateBtn" disabled>Generate Image</button>
+      
+      <div id="genStatusContainer" style="margin-top: 1.5rem; display: none;">
+        <div class="progress-info">
+          <span id="genStatusText">Starting diffusion...</span>
+          <span id="genPercentText">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="genProgressBar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div id="imageResultContainer" style="margin-top: 1.5rem; text-align: center;">
+        <img id="resultImage" style="max-width: 100%; display: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
+      </div>
     </div>
   </div>
 
