@@ -1,4 +1,4 @@
-import { loadModel, getLoadedModelInfo } from '@qvac/sdk';
+import { loadModel, getLoadedModelInfo, close } from '@qvac/sdk';
 import * as qvac from '@qvac/sdk';
 import { getPreferredDevice } from './deviceFallback.js';
 
@@ -22,9 +22,14 @@ export function getModelState() {
   return { loadedModelId, isLoading, loadPercent, loadStatus };
 }
 
-export function resetModelState() {
+export async function resetModelState() {
   loadedModelId = null;
   process.modelId = null;
+  try {
+    await close();
+  } catch (err: any) {
+    console.error('Failed to close QVAC connection:', err.message);
+  }
 }
 
 export async function ensureModelLoaded(onProgress?: (percent: number, status: string) => void): Promise<string | null> {
@@ -42,7 +47,7 @@ export async function ensureModelLoaded(onProgress?: (percent: number, status: s
 
   isLoading = true;
   console.log('Starting model download...');
-  const preferredDevice = getPreferredDevice();
+  const preferredDevice = process.env.FORCE_CPU ? 'cpu' : getPreferredDevice();
   const loadConfig: any = { prediction: 'v' };
 
   if (preferredDevice) {

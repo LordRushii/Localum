@@ -8,7 +8,7 @@ function App() {
   const [toastVisible, setToastVisible] = useState(false);
   const [closingToast, setClosingToast] = useState(false);
 
-  const { modelProgress, genProgress, image, error, generate, setError, isGenerating } = useImageGenerator();
+  const { modelProgress, genProgress, image, error, generate, setError, isGenerating, device, setDevice } = useImageGenerator();
 
   const isModelLoaded = modelProgress.percent === 100;
 
@@ -106,6 +106,28 @@ function App() {
               disabled={!isModelLoaded || isGenerating}
             >
               9:16
+            </button>
+          </div>
+        </div>
+
+        <div className="input-group">
+          <label>Hardware Device</label>
+          <div className="segmented-control">
+            <button
+              type="button"
+              className={`segment-btn ${device === 'gpu' ? 'active' : ''}`}
+              onClick={() => setDevice('gpu')}
+              disabled={isGenerating}
+            >
+              GPU
+            </button>
+            <button
+              type="button"
+              className={`segment-btn ${device === 'cpu' ? 'active' : ''}`}
+              onClick={() => setDevice('cpu')}
+              disabled={isGenerating}
+            >
+              CPU
             </button>
           </div>
         </div>

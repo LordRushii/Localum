@@ -8,6 +8,7 @@ export function useImageGenerator() {
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [device, setDeviceState] = useState<'gpu' | 'cpu'>('gpu');
 
   useEffect(() => {
     const isElectron = (window as any).electronAPI?.isElectron;
@@ -17,6 +18,9 @@ export function useImageGenerator() {
 
     socket.emit('trigger-model-download');
 
+    socket.on('device-preference', (pref: 'gpu' | 'cpu') => {
+      setDeviceState(pref);
+    });
     socket.on('model-download-progress', setModelProgress);
     socket.on('progress', (progressData) => {
       setGenProgress({
@@ -55,9 +59,15 @@ export function useImageGenerator() {
     setGenProgress({ percent: 0, status: 'Starting diffusion...', sub: 'DIFFUSION INITIALIZING' });
     setImage(null);
     setIsGenerating(true);
-    socketRef.current?.emit('generate', { prompt, ratio });
+    const formattedPrompt = `${prompt}, photorealistic, highly detailed, cinematic lighting, 8k, sharp focus`;
+    socketRef.current?.emit('generate', { prompt: formattedPrompt, ratio });
   };
 
-  return { modelProgress, genProgress, image, error, generate, setError, isGenerating };
+  const setDevice = (newDevice: 'gpu' | 'cpu') => {
+    setDeviceState(newDevice);
+    socketRef.current?.emit('set-device', newDevice);
+  };
+
+  return { modelProgress, genProgress, image, error, generate, setError, isGenerating, device, setDevice };
 }
 

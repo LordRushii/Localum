@@ -5,7 +5,7 @@ import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { ensureModelLoaded, getModelState, resetModelState } from './src/modelManager.js';
 import { runDiffusion } from './src/diffusionService.js';
-import { isWorkerCrash, setPreferredDevice } from './src/deviceFallback.js';
+import { isWorkerCrash, setPreferredDevice, getPreferredDevice } from './src/deviceFallback.js';
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +30,35 @@ app.use(express.static(clientBuildPath));
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+
+  // Send current preferred device to client on connection
+  socket.emit('device-preference', getPreferredDevice() || 'gpu');
+
+  socket.on('set-device', async (device: 'gpu' | 'cpu') => {
+    if (device !== 'gpu' && device !== 'cpu') return;
+
+    console.log(`[Server] Setting preferred device to ${device}`);
+    setPreferredDevice(device);
+
+    // Broadcast updated preference to all clients
+    io.emit('device-preference', device);
+
+    // Reset model state since device config changed
+    await resetModelState();
+
+    // Automatically trigger model reload on the new device
+    io.emit('model-download-progress', { percent: 0, status: `Re-initializing model on ${device.toUpperCase()}...` });
+    try {
+      const modelId = await ensureModelLoaded((percent, status) => {
+        io.emit('model-download-progress', { percent: Math.round(percent), status });
+      });
+      if (modelId) {
+        io.emit('model-download-progress', { percent: 100, status: 'Model fully loaded locally.' });
+      }
+    } catch (err: any) {
+      io.emit('model-download-progress', { percent: 0, status: `Failed to load model: ${err.message}` });
+    }
+  });
 
   socket.on('trigger-model-download', async () => {
     const state = getModelState();
@@ -60,27 +89,32 @@ io.on('connection', (socket) => {
     if (!loadedModelId) return socket.emit('error_event', { message: 'Model is not loaded yet' });
     try {
       socket.emit('progress', { percent: 0, status: 'Starting diffusion...', sub: 'DIFFUSION INITIALIZING' });
-      const { dataUrl, seed } = await runDiffusion(loadedModelId, prompt,
+      const { dataUrl, seed } = await runDiffusion(loadedModelId, prompt, ratio,
         (percent, status) => socket.emit('progress', { percent, status, sub: 'RUNNING DIFFUSION' })
       );
       socket.emit('success', { url: dataUrl, prompt, seed });
     } catch (err: any) {
       if (isWorkerCrash(err)) {
         setPreferredDevice('cpu');
-        resetModelState(); // clear loadedModelId / process.modelId
+        io.emit('device-preference', 'cpu');
+        await resetModelState(); // clear loadedModelId / process.modelId
         socket.emit('progress', { percent: 0, status: 'GPU driver crashed. Falling back to CPU...', sub: 'CPU FALLBACK' });
         try {
           const modelId = await ensureModelLoaded((p, s) => io.emit('model-download-progress', { percent: Math.round(p), status: s }));
           if (!modelId) {
             throw new Error('Model failed to load on CPU');
           }
-          const { dataUrl, seed } = await runDiffusion(modelId, prompt, (p, s) =>
+          const { dataUrl, seed } = await runDiffusion(modelId, prompt, ratio, (p, s) =>
             socket.emit('progress', { percent: p, status: s, sub: 'RUNNING DIFFUSION (CPU)' }));
           socket.emit('success', { url: dataUrl, prompt, seed });
         } catch (cpuErr: any) {
+          await resetModelState();
           socket.emit('error_event', { message: 'Image generation failed on CPU: ' + cpuErr.message });
         }
       } else {
+        if (err.message && err.message.includes('Cannot set new job')) {
+          await resetModelState();
+        }
         socket.emit('error_event', { message: 'Image generation failed: ' + err.message });
       }
     }
