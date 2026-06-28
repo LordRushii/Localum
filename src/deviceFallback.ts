@@ -49,5 +49,11 @@ export function setPreferredDevice(device: string): void {
 }
 
 export function isWorkerCrash(err: any): boolean {
-  return err.code === 50205 || (err.message && err.message.includes('WORKER_CRASHED'));
+  if (err.code === 50205) return true;
+  if (!err.message) return false;
+  return (
+    err.message.includes('WORKER_CRASHED') ||
+    err.message.includes('RPC initialization timed out') ||
+    err.message.includes('worker process may have failed to start')
+  );
 }

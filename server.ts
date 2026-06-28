@@ -96,7 +96,27 @@ io.on('connection', (socket) => {
         io.emit('model-download-progress', { percent: 100, status: 'Model fully loaded locally.' });
       }
     } catch (err: any) {
-      io.emit('model-download-progress', { percent: 0, status: `Failed to load model: ${err.message}` });
+      if (isWorkerCrash(err)) {
+        // GPU worker failed to init (e.g. RPC timeout, WORKER_CRASHED) — auto-fall back to CPU.
+        console.log('[Server] GPU worker failed during model load. Auto-switching to CPU...');
+        setPreferredDevice('cpu');
+        io.emit('device-preference', 'cpu');
+        await resetModelState();
+        io.emit('model-download-progress', { percent: 0, status: 'GPU init failed. Falling back to CPU...' });
+        try {
+          const modelId = await ensureModelLoaded(MODEL_STORAGE_PATH, (percent, status) => {
+            io.emit('model-download-progress', { percent: Math.round(percent), status });
+          });
+          if (modelId) {
+            io.emit('model-download-progress', { percent: 100, status: 'Model fully loaded locally.' });
+          }
+        } catch (cpuErr: any) {
+          await resetModelState();
+          io.emit('model-download-progress', { percent: 0, status: `Failed to load model on CPU: ${cpuErr.message}` });
+        }
+      } else {
+        io.emit('model-download-progress', { percent: 0, status: `Failed to load model: ${err.message}` });
+      }
     }
   });
 
