@@ -68,7 +68,6 @@ export async function ensureModelLoaded(
       modelSrc: SD_V2_1_1B_Q8_0,
       modelType: 'sdcpp-generation',
       modelConfig: loadConfig,
-      modelCacheDir: modelStoragePath,
       onProgress: (p: any) => {
         loadPercent = p.percentage;
         loadStatus = p.percentage >= 100
