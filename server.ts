@@ -12,11 +12,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+const clientBuildPath = __dirname.endsWith('dist')
+  ? path.join(__dirname, '..', 'client', 'dist')
+  : path.join(__dirname, 'client', 'dist');
+
+app.use(express.static(clientBuildPath));
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -82,7 +92,7 @@ io.on('connection', (socket) => {
 });
 
 app.get('*any', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 const activeServer = server.listen(PORT, () => {

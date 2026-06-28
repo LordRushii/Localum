@@ -1,0 +1,62 @@
+import { useEffect, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+export function useImageGenerator() {
+  const socketRef = useRef<Socket | null>(null);
+  const [modelProgress, setModelProgress] = useState({ percent: 0, status: '' });
+  const [genProgress, setGenProgress] = useState({ percent: 0, status: '', sub: '' });
+  const [image, setImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const socketUrl = import.meta.env.DEV ? 'http://localhost:3000' : '';
+    const socket = io(socketUrl);
+    socketRef.current = socket;
+
+    socket.emit('trigger-model-download');
+
+    socket.on('model-download-progress', setModelProgress);
+    socket.on('progress', (progressData) => {
+      setGenProgress({
+        percent: progressData.percent,
+        status: progressData.status,
+        sub: progressData.sub || ''
+      });
+    });
+    socket.on('success', (data) => {
+      setImage(data.url);
+      setIsGenerating(false);
+    });
+    socket.on('error_event', (e) => {
+      setError(e.message);
+      setIsGenerating(false);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      setIsGenerating(false);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err);
+      setError('Connection to server lost. Please try again.');
+      setIsGenerating(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const generate = (prompt: string, ratio = '1:1') => {
+    setError(null);
+    setGenProgress({ percent: 0, status: 'Starting diffusion...', sub: 'DIFFUSION INITIALIZING' });
+    setImage(null);
+    setIsGenerating(true);
+    socketRef.current?.emit('generate', { prompt, ratio });
+  };
+
+  return { modelProgress, genProgress, image, error, generate, setError, isGenerating };
+}
+

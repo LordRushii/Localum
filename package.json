@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "build": "tsc",
+    "dev": "concurrently \"tsx watch server.ts\" \"npm run dev --prefix client\"",
+    "build": "tsc && npm run build --prefix client",
     "start": "node dist/server.js"
   },
   "keywords": [],
