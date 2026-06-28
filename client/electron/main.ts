@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { fork } from 'child_process';
@@ -13,16 +13,44 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 let serverProcess: any = null;
 
-function isServerRunning(port: number): Promise<boolean> {
+// ── Diagnostics helpers ──────────────────────────────────────────────────────
+function log(msg: string) {
+  console.log(`[Electron] ${new Date().toISOString()} ${msg}`);
+}
+function logErr(msg: string) {
+  console.error(`[Electron] ${new Date().toISOString()} ${msg}`);
+}
+
+// ── Health check ─────────────────────────────────────────────────────────────
+// Hits the dedicated /health endpoint added to server.ts so that we only
+// proceed once the Express app is fully initialised (not just port-open).
+function checkHealth(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = http.get(`http://localhost:${port}/`, (res) => {
-      resolve(true);
+    const req = http.get(`http://localhost:${port}/health`, (res) => {
+      resolve(res.statusCode === 200);
     });
-    req.on('error', () => {
-      resolve(false);
-    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1000, () => { req.destroy(); resolve(false); });
     req.end();
   });
+}
+
+// Poll /health every 200 ms for up to 15 seconds (75 attempts).
+async function waitForServer(
+  port: number,
+  intervalMs = 200,
+  maxAttempts = 75
+): Promise<{ ready: boolean; attempts: number }> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const ok = await checkHealth(port);
+    if (ok) return { ready: true, attempts: attempt };
+    // Log every 5th attempt to reduce noise while still being visible
+    if (attempt % 5 === 0) {
+      log(`Waiting for backend /health on port ${port}... (attempt ${attempt}/${maxAttempts})`);
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return { ready: false, attempts: maxAttempts };
 }
 
 function createWindow() {
@@ -50,31 +78,52 @@ function createWindow() {
 }
 
 async function startBackendAndCreateWindow() {
-  const alreadyRunning = await isServerRunning(PORT);
-  
+  // Derive the persistent, writable user-data path for model storage.
+  // This is passed to the server process via env so modelManager.ts can
+  // forward it to @qvac/sdk as `modelCacheDir`.
+  const userDataPath = app.getPath('userData');
+  const modelStoragePath = path.join(userDataPath, 'qvac-models');
+
+  log(`App userData path : ${userDataPath}`);
+  log(`Model storage path: ${modelStoragePath}`);
+
+  // Check if a server is already running (e.g. in dev mode started separately)
+  const alreadyRunning = await checkHealth(PORT);
+
   if (alreadyRunning) {
-    console.log(`[Electron] Backend server is already running on port ${PORT}.`);
+    log(`Backend server already running and healthy on port ${PORT}.`);
   } else {
-    console.log(`[Electron] Backend server not running. Spawning it...`);
-    
+    log(`Backend server not running. Spawning...`);
+
     let serverPath: string;
     if (isDev) {
-      // In dev, the server.ts is at the root directory (parent of client/)
       serverPath = path.join(__dirname, '..', '..', 'server.ts');
     } else {
-      // In production, server is compiled to dist-server/server.js
       serverPath = path.join(__dirname, '..', 'dist-server', 'server.js');
       if (serverPath.includes('app.asar')) {
         serverPath = serverPath.replace('app.asar', 'app.asar.unpacked');
       }
     }
 
-    const userDataPath = app.getPath('userData');
-    
+    log(`Server script path: ${serverPath}`);
+
+    // Buffer stderr so we can display it in an error dialog if startup fails.
+    let stderrBuffer = '';
+
+    const serverEnv = {
+      ...process.env,
+      HOME: userDataPath,
+      USERPROFILE: userDataPath,
+      PORT: String(PORT),
+      // Key: tell server.ts / modelManager.ts where to store model files.
+      MODEL_STORAGE_PATH: modelStoragePath,
+    };
+
+    const spawnStart = Date.now();
+
     if (isDev) {
-      // For development, if we need to spawn it ourselves, run tsx
       const rootDir = path.join(__dirname, '..', '..');
-      const tsxBin = process.platform === 'win32' 
+      const tsxBin = process.platform === 'win32'
         ? path.join(rootDir, 'node_modules', '.bin', 'tsx.cmd')
         : path.join(rootDir, 'node_modules', '.bin', 'tsx');
 
@@ -82,58 +131,58 @@ async function startBackendAndCreateWindow() {
       serverProcess = spawn(tsxBin, [serverPath], {
         cwd: rootDir,
         stdio: ['ignore', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          HOME: userDataPath,
-          USERPROFILE: userDataPath,
-          PORT: String(PORT),
-        }
+        env: serverEnv,
       });
     } else {
-      // In production, fork the compiled JS server script
       serverProcess = fork(serverPath, [], {
         stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-        env: {
-          ...process.env,
-          HOME: userDataPath,
-          USERPROFILE: userDataPath,
-          PORT: String(PORT),
-        }
+        env: serverEnv,
       });
     }
 
+    log(`Server process spawned (PID: ${serverProcess.pid}) in ${Date.now() - spawnStart}ms`);
+
     serverProcess.stdout?.on('data', (data: any) => {
-      console.log(`[Server stdout] ${data.toString().trim()}`);
+      process.stdout.write(`[Server stdout] ${data.toString()}`);
     });
 
     serverProcess.stderr?.on('data', (data: any) => {
-      console.error(`[Server stderr] ${data.toString().trim()}`);
+      const text = data.toString();
+      stderrBuffer += text;
+      process.stderr.write(`[Server stderr] ${text}`);
     });
 
     serverProcess.on('close', (code: number) => {
-      console.log(`[Server] Process exited with code ${code}`);
+      log(`Server process exited with code ${code}`);
       serverProcess = null;
     });
-  }
 
-  // Poll server port until it's active before opening window
-  let attempts = 0;
-  const maxAttempts = 60; // Wait up to 60 seconds
-  let serverReady = false;
+    // ── Wait for /health ───────────────────────────────────────────────────
+    const healthStart = Date.now();
+    const { ready, attempts } = await waitForServer(PORT);
 
-  while (attempts < maxAttempts) {
-    const isReady = await isServerRunning(PORT);
-    if (isReady) {
-      serverReady = true;
-      break;
+    if (ready) {
+      log(`Health check passed after ${attempts} attempt(s) (${Date.now() - healthStart}ms)`);
+    } else {
+      logErr(`Health check FAILED after ${attempts} attempt(s) (${Date.now() - healthStart}ms)`);
+
+      // Show a human-readable error dialog with the actual server stderr output
+      // instead of silently opening a broken renderer.
+      const stderrSnippet = stderrBuffer.trim()
+        ? stderrBuffer.trim().slice(-2000) // last 2 KB to keep dialog manageable
+        : '(no stderr output captured)';
+
+      dialog.showErrorBox(
+        'Localum — Server Failed to Start',
+        `The backend server did not respond on port ${PORT} within 15 seconds.\n\n` +
+        `Server path: ${serverPath}\n` +
+        `Model storage: ${modelStoragePath}\n\n` +
+        `--- Server stderr (last 2 KB) ---\n${stderrSnippet}`
+      );
+
+      app.quit();
+      return;
     }
-    console.log(`[Electron] Waiting for backend server to listen on port ${PORT}... (attempt ${attempts + 1}/${maxAttempts})`);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    attempts++;
-  }
-
-  if (!serverReady) {
-    console.error('[Electron] Backend server failed to start or listen on port.');
   }
 
   createWindow();
@@ -154,20 +203,20 @@ app.on('before-quit', (e) => {
   if (serverProcess && !isQuitting) {
     e.preventDefault();
     isQuitting = true;
-    console.log('[Electron] App is quitting. Terminating backend server gracefully...');
+    log('App is quitting — terminating backend server gracefully...');
 
     const quitTimeout = setTimeout(() => {
-      console.error('[Electron] Backend server shutdown timed out, force quitting.');
+      logErr('Backend server shutdown timed out, force quitting.');
       app.quit();
     }, 8000);
 
     serverProcess.on('exit', () => {
       clearTimeout(quitTimeout);
-      console.log('[Electron] Backend server terminated successfully. Quitting App.');
+      log('Backend server terminated. Quitting app.');
       app.quit();
     });
 
-    // Send SIGTERM to let server run its graceful shutdown logic (closing socket.io and model)
+    // Send SIGTERM to let server run its graceful shutdown logic
     serverProcess.kill('SIGTERM');
   }
 });

@@ -63,7 +63,8 @@
     "npmRebuild": false,
     "asarUnpack": [
       "dist-server/**/*",
-      "node_modules/**/*"
+      "node_modules/@qvac/**/*",
+      "node_modules/bare-runtime-win32-x64/**/*"
     ],
     "win": {
       "target": "nsis"

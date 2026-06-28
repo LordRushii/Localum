@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import os from 'os';
 import http from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
@@ -20,6 +21,15 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 3000;
 
+// Resolve a persistent, writable model storage directory.
+// In a packaged Electron app, main.ts sets MODEL_STORAGE_PATH to
+// path.join(app.getPath('userData'), 'qvac-models') via the child process env.
+// In dev / standalone mode we fall back to HOME/.localum/models.
+const MODEL_STORAGE_PATH = process.env.MODEL_STORAGE_PATH
+  || path.join(process.env.HOME || process.env.USERPROFILE || os.homedir(), '.localum', 'models');
+
+console.log(`[Server] ${new Date().toISOString()} Starting — model storage path: ${MODEL_STORAGE_PATH}`);
+
 app.use(express.json());
 
 const clientBuildPath = __dirname.endsWith('dist')
@@ -27,6 +37,13 @@ const clientBuildPath = __dirname.endsWith('dist')
   : path.join(__dirname, 'client', 'dist');
 
 app.use(express.static(clientBuildPath));
+
+// ── Health check endpoint ────────────────────────────────────────────────────
+// Electron main.ts polls this before opening the BrowserWindow so that the
+// renderer is never loaded against a not-yet-ready server.
+app.get('/health', (_req, res) => {
+  res.sendStatus(200);
+});
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -49,7 +66,7 @@ io.on('connection', (socket) => {
     // Automatically trigger model reload on the new device
     io.emit('model-download-progress', { percent: 0, status: `Re-initializing model on ${device.toUpperCase()}...` });
     try {
-      const modelId = await ensureModelLoaded((percent, status) => {
+      const modelId = await ensureModelLoaded(MODEL_STORAGE_PATH, (percent, status) => {
         io.emit('model-download-progress', { percent: Math.round(percent), status });
       });
       if (modelId) {
@@ -72,7 +89,7 @@ io.on('connection', (socket) => {
     }
 
     try {
-      const modelId = await ensureModelLoaded((percent, status) => {
+      const modelId = await ensureModelLoaded(MODEL_STORAGE_PATH, (percent, status) => {
         io.emit('model-download-progress', { percent: Math.round(percent), status });
       });
       if (modelId) {
@@ -100,7 +117,7 @@ io.on('connection', (socket) => {
         await resetModelState(); // clear loadedModelId / process.modelId
         socket.emit('progress', { percent: 0, status: 'GPU driver crashed. Falling back to CPU...', sub: 'CPU FALLBACK' });
         try {
-          const modelId = await ensureModelLoaded((p, s) => io.emit('model-download-progress', { percent: Math.round(p), status: s }));
+          const modelId = await ensureModelLoaded(MODEL_STORAGE_PATH, (p, s) => io.emit('model-download-progress', { percent: Math.round(p), status: s }));
           if (!modelId) {
             throw new Error('Model failed to load on CPU');
           }
@@ -130,7 +147,7 @@ app.get('*any', (req, res) => {
 });
 
 const activeServer = server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`[Server] ${new Date().toISOString()} Server running at http://localhost:${PORT}`);
 });
 
 // Graceful shutdown handling
