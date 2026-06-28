@@ -2,12 +2,16 @@
   "name": "client",
   "private": true,
   "version": "0.0.0",
+  "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:tsc": "tsc -p tsconfig.electron.json",
+    "electron:dev": "concurrently -k -n \"Server,Vite,TSC,Electron\" -c \"magenta,yellow,cyan,blue\" \"pnpm --prefix .. server:dev\" \"vite\" \"tsc -p tsconfig.electron.json -w\" \"wait-on http://127.0.0.1:5173 && wait-on http://127.0.0.1:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "pnpm --prefix .. server:build && pnpm build && tsc -p tsconfig.electron.json && electron-builder"
   },
   "dependencies": {
     "react": "^19.2.7",
@@ -19,8 +23,56 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.69.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.0"
+    "vite": "^8.1.0",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.localum.imggen",
+    "productName": "Localum",
+    "directories": {
+      "output": "../release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      {
+        "from": "../dist",
+        "to": "dist-server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../node_modules",
+        "to": "node_modules",
+        "filter": [
+          "**/*",
+          "!**/*.d.ts",
+          "!**/@types/**/*",
+          "!**/typescript/**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "asarUnpack": [
+      "dist-server/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

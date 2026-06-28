@@ -4,9 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"tsx watch server.ts\" \"npm run dev --prefix client\"",
-    "build": "tsc && npm run build --prefix client",
-    "start": "node dist/server.js"
+    "dev": "concurrently \"tsx watch server.ts\" \"pnpm --prefix client dev\"",
+    "build": "tsc && pnpm --prefix client build",
+    "start": "node dist/server.js",
+    "server:dev": "tsx watch server.ts",
+    "server:build": "tsc",
+    "electron:dev": "pnpm --prefix client electron:dev",
+    "electron:build": "pnpm --prefix client electron:build"
   },
   "keywords": [],
   "author": "",

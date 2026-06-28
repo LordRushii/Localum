@@ -10,7 +10,8 @@ export function useImageGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    const socketUrl = import.meta.env.DEV ? 'http://localhost:3000' : '';
+    const isElectron = (window as any).electronAPI?.isElectron;
+    const socketUrl = (import.meta.env.DEV || isElectron) ? 'http://localhost:3000' : '';
     const socket = io(socketUrl);
     socketRef.current = socket;
 
