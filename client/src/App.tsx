@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useImageGenerator } from './hooks/useImageGenerator';
 import './index.css';
-import logo from './assets/logo.png';
 
 function App() {
   const [prompt, setPrompt] = useState('');
   const [ratio, setRatio] = useState('1:1');
+  const [generatedRatio, setGeneratedRatio] = useState('1:1');
   const [toastVisible, setToastVisible] = useState(false);
   const [closingToast, setClosingToast] = useState(false);
 
@@ -36,6 +36,7 @@ function App() {
 
   const handleGenerate = () => {
     if (!prompt.trim() || !isModelLoaded || isGenerating) return;
+    setGeneratedRatio(ratio);
     generate(prompt, ratio);
   };
 
@@ -65,7 +66,6 @@ function App() {
       {/* Left Rail */}
       <div className="left-rail">
         <div className="app-brand">
-          <img src={logo} alt="Localum Logo" className="app-logo" />
           <div className="app-brand-text">
             <h1>Localum</h1>
             <p>Runs entirely on this device.</p>
@@ -147,7 +147,7 @@ function App() {
 
       {/* Right Pane */}
       <div className="right-pane">
-        <div className={`developing-tray ${getAspectClass(ratio)}`}>
+        <div className={`developing-tray ${getAspectClass(image ? generatedRatio : ratio)}`}>
           {image && <img src={image} alt={prompt} className="canvas-image" />}
           
           {isGenerating && (
