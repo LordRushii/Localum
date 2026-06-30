@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useImageGenerator } from './hooks/useImageGenerator';
 import './index.css';
+import logo from './assets/logo.png';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -64,8 +65,11 @@ function App() {
       {/* Left Rail */}
       <div className="left-rail">
         <div className="app-brand">
-          <h1>Localum</h1>
-          <p>Runs entirely on this device.</p>
+          <img src={logo} alt="Localum Logo" className="app-logo" />
+          <div className="app-brand-text">
+            <h1>Localum</h1>
+            <p>Runs entirely on this device.</p>
+          </div>
         </div>
 
         <div className="input-group">

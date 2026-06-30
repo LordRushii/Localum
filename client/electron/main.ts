@@ -54,9 +54,14 @@ async function waitForServer(
 }
 
 function createWindow() {
+  const iconPath = isDev
+    ? path.join(__dirname, '..', 'public', 'logo.png')
+    : path.join(__dirname, '..', 'dist', 'logo.png');
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
