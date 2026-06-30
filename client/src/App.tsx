@@ -151,15 +151,20 @@ function App() {
           {image && <img src={image} alt={prompt} className="canvas-image" />}
           
           {isGenerating && (
-            <>
-              <div className="noise-overlay"></div>
+            <div className="gen-animation-wrapper">
               {!prefersReducedMotion && (
-                <div 
-                  className="scan-line" 
-                  style={{ top: `${genProgress.percent}%` }}
-                ></div>
+                <>
+                  <div className="gen-blob gen-blob-1" />
+                  <div className="gen-blob gen-blob-2" />
+                  <div className="gen-blob gen-blob-3" />
+                  <div className="gen-shimmer" />
+                </>
               )}
-            </>
+              <div
+                className="gen-progress-bar"
+                style={{ width: `${genProgress.percent}%` }}
+              />
+            </div>
           )}
 
           {image && !isGenerating && (
