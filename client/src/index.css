@@ -203,11 +203,9 @@ textarea:disabled {
   overflow: hidden;
 }
 
+/* Base tray — shared chrome only, no sizing here */
 .developing-tray {
   position: relative;
-  width: 100%;
-  max-width: 768px;
-  max-height: 80vh;
   border: 1px solid var(--text-muted);
   display: flex;
   justify-content: center;
@@ -216,20 +214,56 @@ textarea:disabled {
   background-image: radial-gradient(var(--text-muted) 1px, transparent 1px);
   background-size: 20px 20px;
   background-position: center;
+  overflow: hidden;
 }
 
-.tray-aspect-1-1 { aspect-ratio: 1 / 1; }
-.tray-aspect-16-9 { aspect-ratio: 16 / 9; }
-.tray-aspect-9-16 { aspect-ratio: 9 / 16; }
-.tray-aspect-4-3 { aspect-ratio: 4 / 3; }
+/*
+  Sizing strategy per ratio:
+  - Landscape / square: WIDTH-driven. Set width, let aspect-ratio compute height.
+  - Portrait:           HEIGHT-driven. Set height, let aspect-ratio compute width.
+  Never set BOTH an explicit height AND a conflicting max-width at the same time —
+  that causes the box to break out of the intended ratio.
+*/
 
+/* 1:1 — width-driven, cap so it never overflows the viewport height */
+.tray-aspect-1-1 {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: min(512px, 80vh);
+}
+
+/* 16:9 — width-driven landscape */
+.tray-aspect-16-9 {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-width: min(768px, 100%);
+}
+
+/* 9:16 — height-driven portrait; width is derived from height via aspect-ratio */
+.tray-aspect-9-16 {
+  aspect-ratio: 9 / 16;
+  height: 80vh;
+  max-height: 80vh;
+}
+
+.tray-aspect-4-3 {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  max-width: min(600px, 100%);
+}
+
+/* Image fills the tray using absolute positioning to bypass the
+   flex + aspect-ratio percentage-height resolution bug */
 .canvas-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  position: relative;
   z-index: 1;
 }
+
+
 
 /* ─── ChatGPT-style generation animation ─────────────────────────────── */
 
