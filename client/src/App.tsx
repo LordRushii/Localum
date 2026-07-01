@@ -358,10 +358,10 @@ function App() {
                   >
                     <div className="model-card-top">
                       <div className="model-card-badges">
-                        {score.recommended && <span className="badge badge--recommended">⚡ Recommended</span>}
-                        {isActive && <span className="badge badge--active">● Active</span>}
+                        {score.recommended && <span className="badge badge--recommended">Recommended</span>}
+                        {isActive && <span className="badge badge--active">Active</span>}
                         {model.badge && !score.recommended && <span className="badge badge--info">{model.badge}</span>}
-                        {(!score.gpuOk || !score.ramOk) && <span className="badge badge--warn">⚠ High Spec</span>}
+                        {(!score.gpuOk || !score.ramOk) && <span className="badge badge--warn">High Spec</span>}
                       </div>
                       {model.cached && !isActive && (
                         <button
@@ -382,8 +382,6 @@ function App() {
                     </div>
 
                     <div className="model-card-name">{model.label}</div>
-                    <div className="model-card-arch">{model.architecture}</div>
-                    <p className="model-card-desc">{model.description}</p>
 
                     <div className="model-card-meta">
                       <span className="model-meta-pill">{model.params}</span>

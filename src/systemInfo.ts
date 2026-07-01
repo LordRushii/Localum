@@ -26,19 +26,19 @@ function toGb(bytes: number): number {
 function detectGpusWindows(): GpuInfo[] {
   try {
     const raw = execSync(
-      'powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM | ForEach-Object { $_.Name + \\"|\\" + $_.AdapterRAM }"',
+      'powershell -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM | ConvertTo-Json"',
       { timeout: 6000, stdio: ['pipe', 'pipe', 'pipe'] }
     ).toString().trim();
+    if (!raw) return [];
 
-    return raw
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean)
-      .map(line => {
-        const [name, ram] = line.split('|');
-        const vramBytes = parseInt(ram || '0', 10);
-        return { name: (name || '').trim(), vramGb: toGb(vramBytes) };
-      })
+    const parsed = JSON.parse(raw);
+    const gpus = Array.isArray(parsed) ? parsed : [parsed];
+
+    return gpus
+      .map((g: any) => ({
+        name: (g.Name || '').trim(),
+        vramGb: toGb(g.AdapterRAM || 0)
+      }))
       .filter(g => g.name.length > 0);
   } catch {
     return [];

@@ -185,20 +185,19 @@ function getCatalogWithDiskStatus() {
 }
 
 // ── Express setup ─────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 app.use(express.json());
 
-// ── Static file serving (production only) ───────────────────────────────────
-// In dev mode Vite serves the UI on its own port — Express is backend-only.
-// In production / Electron packaged build (running .js), Express serves the built client.
-const isDev = process.env.NODE_ENV === 'development' || __filename.endsWith('.ts');
 
-const clientBuildPath = __dirname.endsWith('dist')
-  ? path.join(__dirname, '..', 'client', 'dist')
-  : path.join(__dirname, 'client', 'dist');
-
-if (!isDev) {
-  app.use(express.static(clientBuildPath));
-}
 
 // ── Health check endpoint ─────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -417,12 +416,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Catch-all: serve index.html for client-side routes (production only)
-if (!isDev) {
-  app.get('*any', (_req, res) => {
-    res.sendFile(path.join(clientBuildPath, 'index.html'));
-  });
-}
+
 
 const activeServer = server.listen(PORT, () => {
   console.log(`[Server] ${new Date().toISOString()} Server running at http://localhost:${PORT}`);
