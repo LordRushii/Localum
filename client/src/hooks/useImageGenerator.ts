@@ -82,6 +82,9 @@ export function useImageGenerator() {
   // We must use the absolute base so REST calls reach Express, not Vite.
   const isElectronGlobal = (window as any).electronAPI?.isElectron;
   const apiBase = (import.meta.env.DEV || isElectronGlobal) ? 'http://localhost:3000' : '';
+  console.log('[DEBUG] isElectronGlobal:', isElectronGlobal);
+  console.log('[DEBUG] import.meta.env.DEV:', import.meta.env.DEV);
+  console.log('[DEBUG] apiBase:', apiBase);
 
   const refreshModels = useCallback(async () => {
     try {

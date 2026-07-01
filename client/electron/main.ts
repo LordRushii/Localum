@@ -78,6 +78,7 @@ function createWindow() {
   } else {
     // In production, load the built static React client
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    mainWindow.webContents.openDevTools(); // Temporary for debugging
   }
 
   mainWindow.on('closed', () => {
