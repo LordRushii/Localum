@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useImageGenerator, scoreModel } from './hooks/useImageGenerator';
 import './index.css';
 
-import logoMark from './assets/logo.png';
+import logoMark from './assets/localum_private_loop_wordmark.png';
 import { Trash2, Cpu, AlertTriangle, Check, Play, DownloadCloud } from 'lucide-react';
 
 type Tab = 'generator' | 'models';
@@ -106,7 +106,7 @@ function App() {
       {/* ── Top Navbar ─────────────────────────────────────────────────────── */}
       <header className="navbar">
         <div className="navbar-logo" style={{ alignItems: 'center', height: '100%', display: 'flex' }}>
-          <img src={logoMark} alt="Localum Logo" style={{ height: '32px', transform: 'scale(3.8)', transformOrigin: 'left center', objectFit: 'contain' }} />
+          <img src={logoMark} alt="Localum Logo" style={{ height: '32px', objectFit: 'contain' }} />
         </div>
 
         <nav className="navbar-tabs">

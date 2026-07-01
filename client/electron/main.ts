@@ -55,19 +55,22 @@ async function waitForServer(
 
 function createWindow() {
   const iconPath = isDev
-    ? path.join(__dirname, '..', 'public', 'logo.png')
-    : path.join(__dirname, '..', 'dist', 'logo.png');
+    ? path.join(__dirname, '..', 'public', 'localum_private_loop_wordmark.png')
+    : path.join(__dirname, '..', 'dist', 'localum_private_loop_wordmark.png');
 
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     icon: iconPath,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  mainWindow.removeMenu();
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');

@@ -2,6 +2,8 @@
   "name": "client",
   "private": true,
   "version": "0.0.0",
+  "description": "Localum Image Generator",
+  "author": "LordRushii",
   "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
@@ -11,7 +13,7 @@
     "preview": "vite preview",
     "electron:tsc": "tsc -p tsconfig.electron.json",
     "electron:dev": "concurrently -k -n \"Server,Vite,TSC,Electron\" -c \"magenta,yellow,cyan,blue\" \"pnpm --prefix .. server:dev\" \"vite\" \"tsc -p tsconfig.electron.json -w\" \"wait-on http://127.0.0.1:5173 && wait-on http://127.0.0.1:3000 && cross-env NODE_ENV=development electron .\"",
-    "electron:build": "pnpm --prefix .. server:build && pnpm build && tsc -p tsconfig.electron.json && electron-builder"
+    "electron:build": "pnpm --prefix .. server:build && pnpm build && tsc -p tsconfig.electron.json && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder"
   },
   "dependencies": {
     "@qvac/sdk": "^0.14.0",
@@ -56,9 +58,15 @@
       }
     ],
     "asar": true,
+    "asarUnpack": [
+      "**/node_modules/bare-runtime-*/**/*",
+      "**/node_modules/@qvac/**/*"
+    ],
     "npmRebuild": false,
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "signExecutable": false,
+      "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": "dmg"
