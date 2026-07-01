@@ -55,7 +55,22 @@ function App() {
   };
 
   const handleGenerate = () => {
-    if (!prompt.trim() || !isModelLoaded || isGenerating) return;
+    if (!prompt.trim() || isGenerating) return;
+
+    if (!isModelLoaded) {
+      const isDownloading = modelProgress.percent > 0 && modelProgress.percent < 100;
+      if (isDownloading || isSwitchingModel) return;
+
+      const hasAnyModel = availableModels.some(m => m.cached);
+      if (!hasAnyModel) {
+        setError("Please download a model to generate images.");
+      } else {
+        setError("Please select and load a downloaded model.");
+      }
+      setActiveTab('models');
+      return;
+    }
+
     setGeneratedRatio(ratio);
     generate(prompt, ratio);
   };
@@ -133,7 +148,7 @@ function App() {
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  disabled={!isModelLoaded || isGenerating}
+                  disabled={isGenerating}
                   autoComplete="off"
                 />
                 <span className="textarea-icon">✦</span>
@@ -149,12 +164,29 @@ function App() {
                     type="button"
                     className={`seg-btn ${ratio === r ? 'seg-btn--active' : ''}`}
                     onClick={() => setRatio(r)}
-                    disabled={!isModelLoaded || isGenerating}
+                    disabled={isGenerating}
                   >
                     {r}
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Model</label>
+              <select
+                value={availableModels.some(m => m.key === activeModelKey && (m.cached || isModelLoaded)) ? activeModelKey : ''}
+                onChange={e => { if (e.target.value) switchModel(e.target.value); }}
+                disabled={isBusy || !availableModels.some(m => m.cached || isModelLoaded)}
+                style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', background: 'var(--bg-panel)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+              >
+                {!availableModels.some(m => m.key === activeModelKey && (m.cached || isModelLoaded)) && (
+                  <option value="" disabled>{activeModel?.label ? `${activeModel.label} (Not Downloaded)` : 'Select a model...'}</option>
+                )}
+                {availableModels.filter(m => m.cached || (m.key === activeModelKey && isModelLoaded)).map(m => (
+                  <option key={m.key} value={m.key} style={{ background: 'var(--bg-panel)' }}>{m.label}</option>
+                ))}
+              </select>
             </div>
 
             <div className="field-group">
@@ -250,7 +282,7 @@ function App() {
               id="generate-btn"
               className={`generate-btn ${isModelLoaded && prompt.trim() && !isGenerating ? 'generate-btn--ready' : ''}`}
               onClick={handleGenerate}
-              disabled={!isModelLoaded || !prompt.trim() || isGenerating || isSwitchingModel}
+              disabled={!prompt.trim() || isGenerating || isSwitchingModel || (modelProgress.percent > 0 && modelProgress.percent < 100)}
             >
               {isGenerating
                 ? <><span className="gen-spinner" /> Generating...</>
@@ -361,7 +393,7 @@ function App() {
                         {model.badge && !score.recommended && <span className="badge badge--info">{model.badge}</span>}
                         {(!score.gpuOk || !score.ramOk) && <span className="badge badge--warn">High Spec</span>}
                       </div>
-                      {model.cached && !isActive && (
+                      {(model.cached || (isActive && isModelLoaded)) && (
                         <button
                           className="model-delete-btn"
                           onClick={() => setConfirmDelete(model.key)}

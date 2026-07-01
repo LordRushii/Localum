@@ -352,10 +352,17 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Refuse to delete the currently loaded model
+    // If deleting the active model, unload it first
     if (modelKey === activeModelKey && getModelState().loadedModelId) {
-      socket.emit('error_event', { message: `Cannot delete "${entry.label}" while it is loaded. Switch to another model first.` });
-      return;
+      console.log(`[Server] Unloading active model ${entry.label} before deletion`);
+      await resetModelState();
+      
+      // Fallback to another cached model or default
+      const catalogStatus = getCatalogWithDiskStatus();
+      const cachedFallback = catalogStatus.find(m => m.cached && m.key !== modelKey);
+      activeModelKey = cachedFallback ? cachedFallback.key : MODEL_CATALOG[1].key;
+      io.emit('active-model', activeModelKey);
+      io.emit('model-download-progress', { percent: 0, status: 'Model unloaded.' });
     }
 
     const filePath = path.join(MODEL_STORAGE_PATH, entry.modelId);
