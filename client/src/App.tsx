@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useImageGenerator, scoreModel } from './hooks/useImageGenerator';
 import './index.css';
 
-import LocalumLogo from './LocalumLogo';
-
+import logoMark from './assets/logo.png';
+import { Trash2, Cpu, AlertTriangle, Check, Play, DownloadCloud } from 'lucide-react';
 
 type Tab = 'generator' | 'models';
 
@@ -90,8 +90,8 @@ function App() {
 
       {/* ── Top Navbar ─────────────────────────────────────────────────────── */}
       <header className="navbar">
-        <div className="navbar-logo" style={{ alignItems: 'center' }}>
-          <LocalumLogo />
+        <div className="navbar-logo" style={{ alignItems: 'center', height: '100%', display: 'flex' }}>
+          <img src={logoMark} alt="Localum Logo" style={{ height: '32px', transform: 'scale(3.8)', transformOrigin: 'left center', objectFit: 'contain' }} />
         </div>
 
         <nav className="navbar-tabs">
@@ -369,12 +369,7 @@ function App() {
                           title={`Delete ${model.label}`}
                           id={`delete-btn-${model.key}`}
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6M14 11v6" />
-                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                          </svg>
+                          <Trash2 size={12} />
                         </button>
                       )}
                     </div>
@@ -385,15 +380,16 @@ function App() {
                       <span className="model-meta-pill">{model.params}</span>
                       <span className="model-meta-pill">{model.quantization}</span>
                       <span className="model-meta-pill">{model.sizeGb}GB</span>
-                      {model.cpuFriendly && <span className="model-meta-pill model-meta-pill--cpu">CPU ✓</span>}
+                      {model.cpuFriendly && <span className="model-meta-pill model-meta-pill--cpu" style={{display: 'flex', alignItems: 'center', gap: '4px'}}><Cpu size={10} /> CPU ✓</span>}
                     </div>
 
-                    {score.warning && <div className="model-card-warning">{score.warning}</div>}
+                    {score.warning && <div className="model-card-warning" style={{display: 'flex', alignItems: 'flex-start', gap: '6px'}}><AlertTriangle size={12} style={{flexShrink: 0, marginTop: '2px'}} /> <span>{score.warning}</span></div>}
 
                     {systemSpecs && systemSpecs.primaryGpuVramGb > 0 && (
                       <div className="model-vram-bar-wrap">
-                        <div className="model-vram-bar-label">
-                          VRAM: {model.vramRequiredGb}GB / {systemSpecs.primaryGpuVramGb}GB
+                        <div className="model-vram-bar-label" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '2px'}}>
+                          <span>VRAM</span>
+                          <span>{model.vramRequiredGb}GB / {systemSpecs.primaryGpuVramGb}GB</span>
                         </div>
                         <div className="model-vram-bar-track">
                           <div
@@ -410,10 +406,10 @@ function App() {
                       onClick={() => { if (!isActive) { switchModel(model.key); setActiveTab('generator'); } }}
                       disabled={isActive || isBusy}
                     >
-                      {isActive ? '✓ Loaded'
+                      {isActive ? <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}><Check size={14} /> Loaded</div>
                         : isSwitchingModel && activeModelKey === model.key ? 'Loading...'
-                          : model.cached ? 'Switch to this model'
-                            : `Download & Load (${model.sizeGb}GB)`}
+                          : model.cached ? <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}><Play size={14} /> Switch Model</div>
+                            : <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}><DownloadCloud size={14} /> Download ({model.sizeGb}GB)</div>}
                     </button>
                   </div>
                 );
@@ -426,19 +422,19 @@ function App() {
       {/* ── Bottom Status Bar ─────────────────────────────────────────────── */}
       <footer className="status-bar">
         <div className="status-item">
-          <span className={`status-dot ${device === 'gpu' ? 'status-dot--green' : 'status-dot--blue'}`} />
+          <span className={`status-dot ${device === 'gpu' ? 'status-dot--cyan' : 'status-dot--muted'}`} />
           <span className="status-label">DEVICE:</span>
           <span className="status-value">{device.toUpperCase()}</span>
         </div>
         <div className="status-sep" />
         <div className="status-item">
-          <span className={`status-dot ${isModelLoaded ? 'status-dot--green' : 'status-dot--amber'}`} />
+          <span className={`status-dot ${isModelLoaded ? 'status-dot--cyan' : 'status-dot--warn'}`} />
           <span className="status-label">MODEL:</span>
           <span className="status-value">{activeModel?.label ?? activeModelKey}</span>
         </div>
         <div className="status-sep" />
         <div className="status-item">
-          <span className={`status-dot ${isGenerating ? 'status-dot--amber status-dot--pulse' : isModelLoaded ? 'status-dot--green' : 'status-dot--muted'}`} />
+          <span className={`status-dot ${isGenerating ? 'status-dot--warn status-dot--pulse' : isModelLoaded ? 'status-dot--cyan' : 'status-dot--muted'}`} />
           <span className="status-label">STATUS:</span>
           <span className="status-value">{getStatusText()}</span>
         </div>
