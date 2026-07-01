@@ -78,17 +78,20 @@ export function useImageGenerator() {
   const [systemSpecs, setSystemSpecs] = useState<SystemSpecs | null>(null);
   const [isSwitchingModel, setIsSwitchingModel] = useState(false);
 
+  // In dev or Electron the Express server runs on :3000, Vite on a different port.
+  // We must use the absolute base so REST calls reach Express, not Vite.
+  const isElectronGlobal = (window as any).electronAPI?.isElectron;
+  const apiBase = (import.meta.env.DEV || isElectronGlobal) ? 'http://localhost:3000' : '';
+
   const refreshModels = useCallback(async () => {
     try {
-      const res = await fetch('/api/models');
+      const res = await fetch(`${apiBase}/api/models`);
       if (res.ok) setAvailableModels(await res.json());
     } catch { /* server may not be up yet */ }
-  }, []);
+  }, [apiBase]);
 
   useEffect(() => {
-    const isElectron = (window as any).electronAPI?.isElectron;
-    const socketUrl = (import.meta.env.DEV || isElectron) ? 'http://localhost:3000' : '';
-    const socket = io(socketUrl);
+    const socket = io(apiBase);
     socketRef.current = socket;
 
     socket.emit('trigger-model-download');
@@ -142,8 +145,8 @@ export function useImageGenerator() {
       setIsGenerating(false);
     });
 
-    // Fetch initial data
-    fetch('/api/specs').then(r => r.ok ? r.json() : null).then(d => { if (d) setSystemSpecs(d); }).catch(() => {});
+    // Fetch initial data — must use apiBase so requests go to Express, not Vite
+    fetch(`${apiBase}/api/specs`).then(r => r.ok ? r.json() : null).then(d => { if (d) setSystemSpecs(d); }).catch(() => {});
     refreshModels();
 
     return () => {
