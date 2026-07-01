@@ -4,6 +4,18 @@ import { getPreferredDevice } from './deviceFallback.js';
 
 const SD_V2_1_1B_Q8_0 = (qvac as any).SD_V2_1_1B_Q8_0;
 
+// Expose all diffusion model constants so server.ts can reference them
+export const MODEL_CONSTANTS: Record<string, any> = {
+  SD_V2_1_1B_Q4_0:       (qvac as any).SD_V2_1_1B_Q4_0,
+  SD_V2_1_1B_Q8_0:       (qvac as any).SD_V2_1_1B_Q8_0,
+  SDXL_BASE_1_0_3B_Q4_0: (qvac as any).SDXL_BASE_1_0_3B_Q4_0,
+  SDXL_BASE_1_0_3B_Q8_0: (qvac as any).SDXL_BASE_1_0_3B_Q8_0,
+  FLUX_2_KLEIN_4B_Q4_0:  (qvac as any).FLUX_2_KLEIN_4B_Q4_0,
+  FLUX_2_KLEIN_4B_Q4_K_M:(qvac as any).FLUX_2_KLEIN_4B_Q4_K_M,
+  FLUX_2_KLEIN_4B_Q6_K:  (qvac as any).FLUX_2_KLEIN_4B_Q6_K,
+  FLUX_2_KLEIN_4B_Q8_0:  (qvac as any).FLUX_2_KLEIN_4B_Q8_0,
+};
+
 // Extend the global Process interface for TypeScript
 declare global {
   namespace NodeJS {
@@ -34,7 +46,8 @@ export async function resetModelState() {
 
 export async function ensureModelLoaded(
   modelStoragePath: string,
-  onProgress?: (percent: number, status: string) => void
+  onProgress?: (percent: number, status: string) => void,
+  modelSrc?: any          // optional — defaults to SD_V2_1_1B_Q8_0 (backward-compatible)
 ): Promise<string | null> {
   // Always log the resolved model storage path so it's visible in terminal/logs.
   console.log(`[ModelManager] ${new Date().toISOString()} Model storage path: ${modelStoragePath}`);
@@ -65,7 +78,7 @@ export async function ensureModelLoaded(
 
   try {
     loadedModelId = await loadModel({
-      modelSrc: SD_V2_1_1B_Q8_0,
+      modelSrc: modelSrc ?? SD_V2_1_1B_Q8_0,
       modelType: 'sdcpp-generation',
       modelConfig: loadConfig,
       onProgress: (p: any) => {
