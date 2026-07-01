@@ -105,9 +105,6 @@ async function startBackendAndCreateWindow() {
       serverPath = path.join(__dirname, '..', '..', 'server.ts');
     } else {
       serverPath = path.join(__dirname, '..', 'dist-server', 'server.js');
-      if (serverPath.includes('app.asar')) {
-        serverPath = serverPath.replace('app.asar', 'app.asar.unpacked');
-      }
     }
 
     log(`Server script path: ${serverPath}`);

@@ -14,9 +14,13 @@
     "electron:build": "pnpm --prefix .. server:build && pnpm build && tsc -p tsconfig.electron.json && electron-builder"
   },
   "dependencies": {
+    "@qvac/sdk": "^0.14.0",
+    "bare-runtime-win32-x64": "^1.30.0",
+    "express": "^5.2.1",
     "lucide-react": "^1.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
@@ -49,27 +53,12 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "../node_modules",
-        "to": "node_modules",
-        "filter": [
-          "**/*",
-          "!**/*.d.ts",
-          "!**/@types/**/*",
-          "!**/typescript/**/*"
-        ]
       }
     ],
     "asar": true,
     "npmRebuild": false,
-    "asarUnpack": [
-      "**/dist-server/**/*",
-      "**/node_modules/@qvac/**/*",
-      "**/node_modules/bare-runtime-win32-x64/**/*"
-    ],
     "win": {
-      "target": "dir"
+      "target": "nsis"
     },
     "mac": {
       "target": "dmg"
