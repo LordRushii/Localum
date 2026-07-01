@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useImageGenerator, scoreModel } from './hooks/useImageGenerator';
 import './index.css';
 
+import LocalumLogo from './LocalumLogo';
+
+
 type Tab = 'generator' | 'models';
 
 function App() {
@@ -87,9 +90,8 @@ function App() {
 
       {/* ── Top Navbar ─────────────────────────────────────────────────────── */}
       <header className="navbar">
-        <div className="navbar-logo">
-          <span className="navbar-logo-text">LOCALUM</span>
-          <span className="navbar-logo-sub">local · offline · yours</span>
+        <div className="navbar-logo" style={{ alignItems: 'center' }}>
+          <LocalumLogo />
         </div>
 
         <nav className="navbar-tabs">
@@ -110,11 +112,7 @@ function App() {
         </nav>
 
         <div className="navbar-end">
-          {/* offline badge */}
-          <span className="offline-badge">
-            <span className="offline-dot" />
-            Offline
-          </span>
+          {/* Action buttons could go here */}
         </div>
       </header>
 
@@ -414,8 +412,8 @@ function App() {
                     >
                       {isActive ? '✓ Loaded'
                         : isSwitchingModel && activeModelKey === model.key ? 'Loading...'
-                        : model.cached ? 'Switch to this model'
-                        : `Download & Load (${model.sizeGb}GB)`}
+                          : model.cached ? 'Switch to this model'
+                            : `Download & Load (${model.sizeGb}GB)`}
                     </button>
                   </div>
                 );

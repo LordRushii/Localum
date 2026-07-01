@@ -35,6 +35,7 @@
   "build": {
     "appId": "com.localum.imggen",
     "productName": "Localum",
+    "icon": "../assets/localum_private_loop_wordmark.png",
     "directories": {
       "output": "../release"
     },
